@@ -1,4 +1,4 @@
-import argparse
+import argparse,itertools
 import sys,os
 def print_matrix(matrix,seq1,seq2):
     seq2 = '  '+seq2
@@ -9,18 +9,11 @@ def print_matrix(matrix,seq1,seq2):
         if row[0]=='-': continue
         for i,val in enumerate(row):
             if matrix[0][i]=='-': break
-            print '{:>4}'.format(val),
+            print '{:>3}'.format(val),
         print
         print
 def print_backtrack(matrix,seq1,seq2):
-    first = True
-    for row in matrix:
-        if first:
-            first = False
-            for i in range(len(row)):
-                row[i] = '_'
-        row[0]='|'
-    matrix[0][0]='X'
+    matrix[0][0]=' X '
     seq2 = '  '+seq2
     matrix.insert(0,list(' '+seq1))
     matrix = [[seq2[i]] + x for i,x in enumerate(matrix)]
@@ -29,26 +22,106 @@ def print_backtrack(matrix,seq1,seq2):
         if row[0]=='-': continue
         for i,val in enumerate(row):
             if matrix[0][i]=='-': break
-            if val==1: val='|'
-            if val==2: val='_'
-            if val==3: val='_|'
-            if val==4: val='\\'
-            if val==5: val='\\|'
-            if val==6: val='_\\'
+            if val==1: val='  |'
+            if val==2: val='_  '
+            if val==3: val='_ |'
+            if val==4: val=' \\ '
+            if val==5: val=' \\|'
+            if val==6: val='_\\ '
             if val==7: val='_\\|'
             print '{:>3}'.format(val),
         print
         print
-def global_alignment(seq1,seq2,match,mismatch,gap):
-    print 'global alignment'
+def global_backtrack(matrix,backtrackmatrix,seq1,seq2,b1,b2):
+    alignments = []
+    i=len(seq2)-len(b2)
+    j=len(seq1)-len(b1)
+    while len(b2)>len(b1):
+        b1+='-'
+    while len(b1)>len(b2):
+        b2+='-'
+    c=0
+    #print '--------------------------------'
+    while j>0 and i>0:
+        #print c,i,j
+        c+=1
+        if backtrackmatrix[i][j] == 0b001:
+            #print "del"
+            b1+='-'
+            b2+=seq2[i-1]
+            i-=1
+        elif backtrackmatrix[i][j] == 0b010:
+            #print "ins"
+            b1+=seq1[j-1]
+            b2+='-'
+            j-=1
+        elif backtrackmatrix[i][j] == 0b100:
+            #print "mat"
+            b1+=seq1[j-1]
+            b2+=seq2[i-1]
+            i-=1
+            j-=1
+        elif backtrackmatrix[i][j] == 0b011:
+            b3,b4 = '%s' % b1, '%s' % b2
+            b1+='-'
+            b2+=seq2[i-1]
+            b3+=seq1[j-1]
+            alignments.append(global_backtrack(matrix,backtrackmatrix,seq1,seq2,b3,b4))
+            i-=1
+        elif backtrackmatrix[i][j] == 0b101:
+            b3,b4 = '%s' % b1, '%s' % b2
+            b1+=seq1[j-1]
+            b2+=seq2[i-1]
+            b4+=seq2[i-1]
+            alignments.append(global_backtrack(matrix,backtrackmatrix,seq1,seq2,b3,b4))
+            i-=1
+            j-=1
+        elif backtrackmatrix[i][j] == 0b110:
+            b3,b4 = '%s' % b1, '%s' % b2
+            b1+=seq1[j-1]
+            b2+=seq2[i-1]
+            b3+=seq1[j-1]
+            alignments.append(global_backtrack(matrix,backtrackmatrix,seq1,seq2,b3,b4))
+            i-=1
+            j-=1
+        elif backtrackmatrix[i][j] == 0b111:
+            b3,b4 = '%s' % b1, '%s' % b2
+            b5,b6 = '%s' % b1, '%s' % b2
+            b1+=seq1[j-1]
+            b2+=seq2[i-1]
+            b3+=seq1[j-1]
+            b6+=seq2[i-1]
+            alignments.append(global_backtrack(matrix,backtrackmatrix,seq1,seq2,b3,b4))
+            alignments.append(global_backtrack(matrix,backtrackmatrix,seq1,seq2,b5,b6))
+            i-=1
+            j-=1
+        #print "b1="+b1[::-1]
+        #print "b2="+b2[::-1]
+    i=len(seq2)-len(b2)
+    while i>0:
+        b2+=seq2[i-1]
+        b1+='-'
+        i-=1
+    i=len(seq1)-len(b1)
+    while i>0:
+        b1+=seq1[i-1]
+        b2+='-'
+        i-=1
+    alignments.append((b1[::-1],b2[::-1]))
+    #print '--------------------------------'
+    return list(itertools.chain.from_iterable(alignments))
+def global_alignment(seq1,seq2,match,mismatch,gap,show_score,show_backtrack):
+    print 'Global alignment'
     print 'sequence#1: '+seq1
     print 'sequence#2: '+seq2
     matrix = [[0 for y in range(len(seq1)+1)] for x in range(len(seq2)+1)]
     backtrackmatrix = [[0 for y in range(len(seq1)+1)] for x in range(len(seq2)+1)]
     for i in range(len(seq1)):
         matrix[0][i+1]=matrix[0][i]-1
+        backtrackmatrix[0][i+1]=0b010
     for i in range(len(seq2)):
         matrix[i+1][0]=matrix[i][0]-1
+        backtrackmatrix[i+1][0]=0b001
     for j in range(len(seq1)):
         for i in range(len(seq2)):
             if seq1[j]==seq2[i]:
@@ -67,47 +140,14 @@ def global_alignment(seq1,seq2,match,mismatch,gap):
             if dele == maxx:
                 backtrackmatrix[i+1][j+1]+=0b001
             matrix[i+1][j+1]= maxx
-    i = len(seq2)
-    j = len(seq1)
-    align1,align2 = '',''
-    while i>0 and j>0:
-        current = matrix[i][j]
-        diagonal = matrix[i-1][j-1]
-        up = matrix[i][j-1]
-        left = matrix[i-1][j]
-        if seq1[j-1]==seq2[i-1]:
-            matc = matrix[j][i] + match
-        elif seq1[j-1]=='-' or seq2[i-1]=='-':
-            matc = matrix[j][i] + gap
-        else:
-            matc = matrix[j][i] + mismatch
-        if current == diagonal + matc:
-            align1 += seq1[j-1]
-            align2 += seq2[i-1]
-            i-=1
-            j-=1
-        elif current == left+gap:
-            align1 += seq1[j-1]
-            align2 += '-'
-            j-=1
-        elif current == up+gap:
-            align1 += '-'
-            align2 += seq2[i-1]
-            i-=1
-        else:
-            #fix padding
-            while i>0:
-                align1 += '-'
-                align2 += seq2[i-1]
-                i-=1
-            while j>0:
-                align2 += '-'
-                align1 += seq1[j-1]
-                j-=1
-    print_backtrack(backtrackmatrix,seq1,seq2)
-    print_matrix(matrix,seq1,seq2)
-    # print align1
-    # print align2
+    alignments = global_backtrack(matrix,backtrackmatrix,seq1,seq2,'','')
+    if show_score: print_matrix(matrix,seq1,seq2)
+    if show_backtrack: print_backtrack(backtrackmatrix,seq1,seq2)
+    print "\nBest alignment(s)\n"
+    for i,align in enumerate(alignments):
+        print align
+        if i%2==1:
+            print
 
 def local_alignment(seq1,seq2,match,mismatch,gap):
     print 'local alignment'
@@ -150,7 +190,7 @@ elif args.input:
                 break
         else:
             input_seq[i]+=line
-global_alignment(input_seq[0],input_seq[1],args.match,args.mismatch,args.gap)
+global_alignment(input_seq[0],input_seq[1],args.match,args.mismatch,args.gap,args.scoringmatrix,args.backtrackmatrix)
 
 if args.output:
     f = open(os.path.splitext(args.output)[0]+'.fas', 'w')
