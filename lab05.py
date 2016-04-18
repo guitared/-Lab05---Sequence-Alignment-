@@ -191,8 +191,7 @@ def local_alignment(seq1,seq2,match,mismatch,gap,show_score,show_backtrack):
                 maxscore = maxx
     b1 = b2 = ''
     i,j = maxi,maxj
-    print i,j
-    while i>0 and j>0:
+    while i>0 or j>0:
         if backtrackmatrix[i][j] == 0b100:
             b1+=seq1[j-1]
             b2+=seq2[i-1]
@@ -206,6 +205,12 @@ def local_alignment(seq1,seq2,match,mismatch,gap,show_score,show_backtrack):
             b1+='-'
             b2+=seq2[i-1]
             i-=1
+    while maxi < len(seq2):
+        b2=seq2[maxi]+b2
+        maxi+=1
+    while maxj < len(seq1):
+        b1=seq1[maxj]+b1
+        maxj+=1
     if show_score: print_matrix(matrix,seq1,seq2)
     if show_backtrack: print_backtrack(backtrackmatrix,seq1,seq2)
     print "\nBest alignment\n"
