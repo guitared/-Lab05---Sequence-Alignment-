@@ -149,12 +149,68 @@ def global_alignment(seq1,seq2,match,mismatch,gap,show_score,show_backtrack):
         if i%2==1:
             print
 
-def local_alignment(seq1,seq2,match,mismatch,gap):
-    print 'local alignment'
+def local_alignment(seq1,seq2,match,mismatch,gap,show_score,show_backtrack):
+    print 'Local alignment'
     print 'sequence#1: '+seq1
     print 'sequence#2: '+seq2
-    matrix = [[0 for x in range(len(seq1)+1)] for x in range(len(seq2)+1)]
-    print_matrix(matrix,seq1,seq2)
+    maxscore = 0
+    matrix = [[0 for y in range(len(seq1)+1)] for x in range(len(seq2)+1)]
+    backtrackmatrix = [[0 for y in range(len(seq1)+1)] for x in range(len(seq2)+1)]
+    for i in range(len(seq1)):
+        matrix[0][i+1]=0
+        backtrackmatrix[0][i+1]=0b010
+    for i in range(len(seq2)):
+        matrix[i+1][0]=0
+        backtrackmatrix[i+1][0]=0b001
+    for j in range(len(seq1)):
+        for i in range(len(seq2)):
+            if seq1[j]==seq2[i]:
+                matc = matrix[i][j] + match
+            elif seq1[j]=='-' or seq2[i]=='-':
+                matc = matrix[i][j] + gap
+            else:
+                matc = matrix[i][j] + mismatch
+            maxinst=maxdele=0
+            for k in range(j+1):
+                if matrix[i+1][k] > maxinst: maxinst = matrix[i+1][k]+0
+            for l in range(i+1):
+                if matrix[l][j+1] > maxdele: maxdele = matrix[l][j+1]+0
+            inst = maxinst + gap
+            dele = maxdele + gap
+            maxx = max(0,matc,inst,dele)
+            if matc == maxx:
+                backtrackmatrix[i+1][j+1]=0b100
+            elif inst == maxx:
+                backtrackmatrix[i+1][j+1]=0b010
+            elif dele == maxx:
+                backtrackmatrix[i+1][j+1]=0b001
+            matrix[i+1][j+1]= maxx
+            if maxx >= maxscore:
+                maxi = i+1
+                maxj = j+1
+                maxscore = maxx
+    b1 = b2 = ''
+    i,j = maxi,maxj
+    print i,j
+    while i>0 and j>0:
+        if backtrackmatrix[i][j] == 0b100:
+            b1+=seq1[j-1]
+            b2+=seq2[i-1]
+            i-=1
+            j-=1
+        if backtrackmatrix[i][j] == 0b010:
+            b1+=seq1[j-1]
+            b2+='-'
+            j-=1
+        if backtrackmatrix[i][j] == 0b001:
+            b1+='-'
+            b2+=seq2[i-1]
+            i-=1
+    if show_score: print_matrix(matrix,seq1,seq2)
+    if show_backtrack: print_backtrack(backtrackmatrix,seq1,seq2)
+    print "\nBest alignment\n"
+    print b1[::-1]
+    print b2[::-1]
 
 
 parser = argparse.ArgumentParser(description='Lab05 - Sequence Alignment using dynamic programming Assignment')
@@ -190,7 +246,7 @@ elif args.input:
                 break
         else:
             input_seq[i]+=line
-global_alignment(input_seq[0],input_seq[1],args.match,args.mismatch,args.gap,args.scoringmatrix,args.backtrackmatrix)
+local_alignment(input_seq[0],input_seq[1],args.match,args.mismatch,args.gap,args.scoringmatrix,args.backtrackmatrix)
 
 if args.output:
     f = open(os.path.splitext(args.output)[0]+'.fas', 'w')
