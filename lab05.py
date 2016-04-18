@@ -143,7 +143,7 @@ def global_alignment(seq1,seq2,match,mismatch,gap,show_score,show_backtrack):
     alignments = global_backtrack(matrix,backtrackmatrix,seq1,seq2,'','')
     if show_score: print_matrix(matrix,seq1,seq2)
     if show_backtrack: print_backtrack(backtrackmatrix,seq1,seq2)
-    print "\nBest alignment(s)\n"
+    print "\nBest Global Alignment(s)\n"
     for i,align in enumerate(alignments):
         print align
         if i%2==1:
@@ -213,7 +213,7 @@ def local_alignment(seq1,seq2,match,mismatch,gap,show_score,show_backtrack):
         maxj+=1
     if show_score: print_matrix(matrix,seq1,seq2)
     if show_backtrack: print_backtrack(backtrackmatrix,seq1,seq2)
-    print "\nBest alignment\n"
+    print "\nBest Local Alignment\n"
     print b1[::-1]
     print b2[::-1]
 
@@ -231,7 +231,8 @@ parser.add_argument('-m','--match',metavar='num',help='match value (default:1)',
 parser.add_argument('-M','--mismatch',metavar='num',help='mismatch value (default:-1)',type=int,default=-1)
 parser.add_argument('-g','--gap',metavar='num',help='gap value (default:-1)',type=int,default=-1)
 # output argument
-parser.add_argument('-o','--output',metavar='name',default=False,help='generate output to file with name')
+parser.add_argument('-G','--global',help='find global alignment (default)',action="store_true")
+parser.add_argument('-L','--local',help='find local alignment',action="store_true")
 args = parser.parse_args()
 
 # processes input data
@@ -251,7 +252,7 @@ elif args.input:
                 break
         else:
             input_seq[i]+=line
-local_alignment(input_seq[0],input_seq[1],args.match,args.mismatch,args.gap,args.scoringmatrix,args.backtrackmatrix)
-
-if args.output:
-    f = open(os.path.splitext(args.output)[0]+'.fas', 'w')
+if args.local:
+    local_alignment(input_seq[0],input_seq[1],args.match,args.mismatch,args.gap,args.scoringmatrix,args.backtrackmatrix)
+else:
+    global_alignment(input_seq[0],input_seq[1],args.match,args.mismatch,args.gap,args.scoringmatrix,args.backtrackmatrix)
